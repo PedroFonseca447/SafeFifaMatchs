@@ -494,12 +494,14 @@ router.put('/games/:id/:side', async (req: Request<{ gameId: string, side: strin
     const idGame = req.params.gameId;
     const side = req.params.side as TeamSide;
 
-    const { teamSelect, score, playerNick } = req.body;
+    const { teamSelect, score, playerNickOne, playerNickTwo } = req.body;
  
 
     const game = await prisma.teamInGame.findFirst({
       where: { gameId: idGame , side: side }
     });
+
+    const data: Record<string, any> = {};
 
     if (!game) {
       res.status(404).json({ message: 'Id de game não identificado' })
@@ -507,21 +509,56 @@ router.put('/games/:id/:side', async (req: Request<{ gameId: string, side: strin
     }
 
     
-   
+   if( teamSelect !== "" ){
+      data.teamSelect = teamSelect;
+   }    
+
+    if( score !== "" ){
+      data.score = score;
+   }    
+
+    if( playerNickOne !== "" ){
+
+        const playerIdOneExist = await prisma.player.findFirst({
+          where: {nickName: playerNickOne}
+        })  
+
+        if(!playerIdOneExist){
+          res.status(404).json({ message: `Esse nick nao foi encontrado ${playerNickOne} ` })
+          return;
+        }
+
+        if(playerIdOneExist.id !== game.playerOneId){
+            data.playerOneId = playerIdOneExist.id;
+        }
+    }    
+
+
+    if( playerNickTwo !== "" ){
+
+        const playerTwoExist = await prisma.player.findFirst({
+          where: {nickName: playerNickOne}
+        })  
+
+        if(!playerTwoExist){
+          res.status(404).json({ message: `Esse nick nao foi encontrado ${playerNickTwo} ` })
+          return;
+        }
+
+        if(playerTwoExist.id !== game.playerOneId){
+            data.playerOneId = playerTwoExist.id;
+        }
+    }   
     
 
-    
-
-    //pega o id da partida e depois o id do time, analisar como passar mais de um
-    //_id por time, ai com isso eu edito o time que eu quero dentro da partida que eu 
-    //apontei
-
-    //game id-> teamInGame(gameID) -> _id do time, assim eu edito 
-
-
+    const update = await prisma.teamInGame.update({
+      where: {id: idGame, side},
+      data,
+    })
+  
    
 
-    res.status(200).json({ message: 'usuário alterado com sucesso' })
+    return res.status(200).json(update);
 
   } catch (error) {
     console.error(error);
