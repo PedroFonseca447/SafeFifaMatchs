@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum TeamSide {
+   PROFIT
+   VECTOR
+}
+
+model Player{
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  nickName String @unique
+
+  teamInGameOne  TeamInGame[] @relation("PlayerOneInTeam")
+  teamInGameTwo  TeamInGame[] @relation("PlayerTwoInTeam")
+}
+
+model Game {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  dataMatch       String
+
+  teams TeamInGame[]
+
+}
+
+model TeamInGame {
+  id    String    @id @default(auto()) @map("_id") @db.ObjectId
+
+  gameId  String    @db.ObjectId
+  game    Game      @relation(fields: [gameId], references: [id])
+
+  side    TeamSide
+  score   Int
+  resultTag     String
+  teamSelect    String
+
+  playerOneId   String?  @db.ObjectId
+  playerOne     Player?  @relation("PlayerOneInTeam", fields: [playerOneId], references: [id])
+
+  playerTwoId   String?  @db.ObjectId
+  playerTwo     Player?  @relation("PlayerTwoInTeam", fields: [playerTwoId], references: [id])
+
+   @@unique([gameId, side])// para garantir que so tenha 1 vector e 1 profit por id de partida
+}

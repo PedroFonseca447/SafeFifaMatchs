@@ -1,0 +1,21 @@
+{
+  "dataMatch": "08/12/2025",
+  "teams": [
+     {
+      "side": "PROFIT",
+      "score": 0,
+      "playerOneTeam": "arthur",
+      "playerTwoTeam": "pedro",
+      "teamSelect": "liverpool",
+      "resultTag": "LOSS"
+     },
+       {
+      "side": "VECTOR",
+      "score": 2,
+      "playerOneTeam": "paulo",
+      "playerTwoTeam": "vitor",
+      "teamSelect": "dinamo kiev",
+      "resultTag": "WIN"
+     }
+  ]
+}
