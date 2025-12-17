@@ -492,7 +492,7 @@ router.delete('games/:gameId', async( req: Request<{gameID: string}>,res: Respon
 router.put('/games/:gameId/:side', async (req: Request<{ gameId: string, side: string }>, res: Response) => {
   try {
     const idGame = req.params.gameId as string;
-    console.log(idGame)
+
     const side = req.params.side as TeamSide;
 
     const { teamSelect, score, playerNickOne, playerNickTwo } = req.body;
@@ -546,7 +546,7 @@ router.put('/games/:gameId/:side', async (req: Request<{ gameId: string, side: s
           return;
         }
 
-        if(playerTwoExist.id !== game.playerOneId){
+        if(playerTwoExist.id !== game.playerTwoId){
             data.playerTwoId = playerTwoExist.id;
         }
     }   
