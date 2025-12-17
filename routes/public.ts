@@ -489,9 +489,10 @@ router.delete('games/:gameId', async( req: Request<{gameID: string}>,res: Respon
 })
 
 
-router.put('/games/:id/:side', async (req: Request<{ gameId: string, side: string }>, res: Response) => {
+router.put('/games/:gameId/:side', async (req: Request<{ gameId: string, side: string }>, res: Response) => {
   try {
-    const idGame = req.params.gameId;
+    const idGame = req.params.gameId as string;
+    console.log(idGame)
     const side = req.params.side as TeamSide;
 
     const { teamSelect, score, playerNickOne, playerNickTwo } = req.body;
@@ -534,10 +535,10 @@ router.put('/games/:id/:side', async (req: Request<{ gameId: string, side: strin
     }    
 
 
-    if( playerNickTwo !== "" ){
+    if(playerNickTwo !== ""){
 
         const playerTwoExist = await prisma.player.findFirst({
-          where: {nickName: playerNickOne}
+          where: {nickName: playerNickTwo}
         })  
 
         if(!playerTwoExist){
@@ -546,14 +547,21 @@ router.put('/games/:id/:side', async (req: Request<{ gameId: string, side: strin
         }
 
         if(playerTwoExist.id !== game.playerOneId){
-            data.playerOneId = playerTwoExist.id;
+            data.playerTwoId = playerTwoExist.id;
         }
     }   
     
 
+   
+
     const update = await prisma.teamInGame.update({
-      where: {id: idGame, side},
-      data,
+        where: {
+          gameId_side: {
+            gameId: idGame,
+            side,
+          },
+        },
+        data,
     })
   
    
