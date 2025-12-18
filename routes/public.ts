@@ -489,28 +489,46 @@ router.delete('games/:gameId', async( req: Request<{gameID: string}>,res: Respon
 })
 
 
+
+
 router.put('/games/:gameId/:side', async (req: Request<{ gameId: string, side: string }>, res: Response) => {
   try {
     const idGame = req.params.gameId as string;
 
     const side = req.params.side as TeamSide;
 
-    const { teamSelect, score, playerNickOne, playerNickTwo } = req.body;
- 
+    const { teamSelect, score, playerNickOne, playerNickTwo, dataMatch } = req.body;
 
-    const game = await prisma.teamInGame.findFirst({
+    
+
+   if (dataMatch !== "") {
+      const updateDayMatch = await prisma.game.update({
+        where: { id: idGame },
+        data: {
+          dataMatch: dataMatch,
+        },
+      });
+      res.status(201).json(updateDayMatch)
+      }
+
+
+
+
+    
+
+    const teamGame = await prisma.teamInGame.findFirst({
       where: { gameId: idGame , side: side }
     });
 
     const data: Record<string, any> = {};
 
-    if (!game) {
+    if (!teamGame) {
       res.status(404).json({ message: 'Id de game não identificado' })
       return;
     }
 
     
-   if( teamSelect !== "" ){
+   if( teamSelect !==""){
       data.teamSelect = teamSelect;
    }    
 
@@ -529,7 +547,7 @@ router.put('/games/:gameId/:side', async (req: Request<{ gameId: string, side: s
           return;
         }
 
-        if(playerIdOneExist.id !== game.playerOneId){
+        if(playerIdOneExist.id !== teamGame.playerOneId){
             data.playerOneId = playerIdOneExist.id;
         }
     }    
@@ -546,7 +564,7 @@ router.put('/games/:gameId/:side', async (req: Request<{ gameId: string, side: s
           return;
         }
 
-        if(playerTwoExist.id !== game.playerTwoId){
+        if(playerTwoExist.id !== teamGame.playerTwoId){
             data.playerTwoId = playerTwoExist.id;
         }
     }   
