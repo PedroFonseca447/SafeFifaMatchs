@@ -2,6 +2,7 @@ import { type Request, type Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { getPlayerId } from '../services/service'
 import type { TeamSide } from '@prisma/client';
+import { gamesService } from '../services';
 
 export class GamesController {
 
@@ -9,65 +10,11 @@ export class GamesController {
     async post(req: Request, res: Response){
         try {
             const { dataMatch, teams } = req.body;
-        
-        
-            if (!Array.isArray(teams) || teams.length !== 2) {
-              return res.status(400).json({
-                message: 'A partida deve conter exatamente 2 times.',
-              });
-            }
-        
-        
-            const resolvedTeams: any[] = [];
-        
-            for (const t of teams) {
-              const playerOneId = await getPlayerId(t.playerOneNickname);
-              const playerTwoId = await getPlayerId(t.playerTwoNickname);
-        
-              if (!playerOneId) {
-                return res.status(404).json({
-                  message: `Jogador principal (playerOne) não encontrado para o time ${t.teamSelect}.`,
-                });
-              }
-        
-             
-              if (playerOneId && playerTwoId && playerOneId === playerTwoId) {
-                return res.status(400).json({
-                  message: `playerOne e playerTwo são o mesmo jogador no time ${t.teamSelect}.`,
-                });
-              }
-        
-            //protecao no futuro para casos de empate e tags erradas   
-        
-              // const profitScore = teams.find(t => t.side === "PROFIT")?.score;
-              // const vectorScore = teams.find(t => t.side === "VECTOR")?.score;
-        
-              // // if(profitScore === vectorScore){
-              // //       const profitResult = teams.find(t => t.resultTag === "PROFIT")?.resultTag;
-              // // } 
-        
-              
-              resolvedTeams.push({
-                side: t.side,
-                score: t.score,
-                resultTag: t.resultTag,
-                teamSelect: t.teamSelect,
-                playerOneId,
-                playerTwoId,
-              });
-            }
-        
-            const game = await prisma.game.create({
-              data: {
-                dataMatch,
-                teams: { create: resolvedTeams },
-              },
-              include: { teams: true },
-            });
+
+          const game = await gamesService.post(dataMatch, teams);
         
             return res.status(201).json(game);
           } catch (error) {
-            console.error(error);
             return res
               .status(500)
               .json({ message: 'Erro no servidor, tente novamente' });
@@ -80,20 +27,11 @@ export class GamesController {
 
     const {gameId} = req.body;
 
-    const game = prisma.game.findFirst({
-      where: {id: gameId}
-    })
 
-      if(!game){
-      res.status(404).json({ message: "Essa partida não foi encontrada"})
-    }
+     const gameD = gamesService.delete(gameId);
 
 
-    await prisma.player.delete({
-      where: {id: gameId}
-    })
-
-    return res.status(204).send();
+    return res.status(204).send(gameD);
 
 
   }catch(error){
