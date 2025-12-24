@@ -2,6 +2,8 @@ import type { TeamSide } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { getPlayerId } from './service'
 
+
+type ResultTag = 'WINNER' | 'LOSS' | 'DRAW';
 export class GamesService {
   async post(dataMatch: any, teams: any) {
     if (!Array.isArray(teams) || teams.length !== 2) {
@@ -146,4 +148,72 @@ export class GamesService {
       data,
     })
   }
+
+
+
+
+  async getAllGamesRegister(){
+
+    const all = await prisma.game.findMany();
+    return all;
+  } 
+
+
+
+  
+  async  getStatsByNickName(nickName: string) {
+  const stats = { wins: 0, loss: 0, draw: 0 };
+
+
+  const player = await prisma.player.findFirst({
+    where: { nickName },
+    select: { id: true },
+  });
+
+  if (!player) {
+    const error: any = new Error(`Nick não encontrado: ${nickName}`);
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const playerId = player.id;
+
+  const allPlayerGames = await prisma.game.findMany({
+    where: {
+      teams: {
+        some: {
+          OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
+        },
+      },
+    },
+    select: {
+      id: true,
+      teams: {
+        where: {
+          OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
+        },
+        select: {
+          resultTag: true,
+        },
+      },
+    },
+  });
+
+  for (const g of allPlayerGames) {
+    for (const t of g.teams) {
+      const result = t.resultTag as ResultTag | null | undefined;
+
+      if (result === 'WINNER') stats.wins++;
+      else if (result === 'LOSS') stats.loss++;
+      else if (result === 'DRAW') stats.draw++;
+    }
+  }
+
+  return {
+    nickName,
+    playerId,
+    totalGames: allPlayerGames.length,
+    stats,
+  };
+}
 }

@@ -1,29 +1,14 @@
 import { type Request, type Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { getPlayerId } from '../services/service'
+import { playerService } from '../services'
 
 export class PlayersController {
   async create(req: Request, res: Response) {
     try {
       const { name } = req.body
 
-      if (!name) {
-        return res.status(404).json('Bad request, o parametro foi passado de maneira errada')
-      }
-
-      let playerExist = await prisma.player.findUnique({
-        where: { nickName: name },
-      })
-
-      if (playerExist) {
-        return res.status(409).json(`esse nickname: ${name} já existe em nosso banco`)
-      }
-
-      const newPlayer = await prisma.player.create({
-        data: {
-          nickName: name,
-        },
-      })
+      const newPlayer = await playerService.create(name)
 
       res.status(201).json(newPlayer)
     } catch (error) {
@@ -36,17 +21,7 @@ export class PlayersController {
     try {
       const { playerId } = req.body
 
-      const user = prisma.player.findFirst({
-        where: { id: playerId },
-      })
-
-      if (!user) {
-        res.status(404).json({ message: 'Esse usuário não foi encontrado' })
-      }
-
-      await prisma.player.delete({
-        where: { id: playerId },
-      })
+      await playerService.delete(playerId)
 
       return res.status(204).send()
     } catch (error) {
@@ -101,43 +76,14 @@ export class PlayersController {
     }
   }
 
-  async get(req: Request<{nickname: string}>, res: Response) {
+  async get(req: Request<{ nickname: string }>, res: Response) {
     try {
       const nickname = req.params.nickname
 
-      const player = await prisma.player.findFirst({
-        where: { nickName: nickname },
-      })
-
-      if (!player) {
-        return res.status(404).json({
-          message: `Player '${nickname}' não encontrado`,
-        })
-      }
-
-      const playerId = player.id
-
-      const gamesWherePlayerWon = await prisma.game.findMany({
-        where: {
-          teams: {
-            some: {
-              resultTag: 'WINNER',
-              OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
-            },
-          },
-        },
-        include: {
-          teams: {
-            include: {
-              playerOne: true,
-              playerTwo: true,
-            },
-          },
-        },
-      })
+      const numbPlayersWin = await playerService.getNumPlayersWon(nickname)
 
       return res.status(200).json({
-        totalWins: gamesWherePlayerWon.length,
+        totalWins: numbPlayersWin,
       })
     } catch (error) {
       console.error(error)
@@ -147,19 +93,15 @@ export class PlayersController {
     }
   }
 
+  async getIdPlayerbyNick(req: Request<{ nick: string }>, res: Response) {
+    try {
+      const playerNick = req.params.nick 
+      const player = await playerService.getIdPlayerNick(playerNick);
 
-  async getIdPlayerbyNick(req: Request<{ nick: string }>, res: Response){
-try {
 
-    const playerNick = req.params.nick ;
-      const player = await getPlayerId(playerNick); 
-
-      if(!player){
-        return res.status(404).json(`esse nick não foi encontrado${playerNick}`);
-      }
-    res.status(200).json(player)
-  } catch (error) {
-    res.status(500).json({ message: 'Erro no servidor, tente novamente' })
-  }
+      res.status(200).json(player)
+    } catch (error) {
+      res.status(500).json({ message: 'Erro no servidor, tente novamente' })
+    }
   }
 }
