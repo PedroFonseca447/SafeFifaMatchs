@@ -322,7 +322,81 @@ router.post('/games', gamesController.post);
 router.delete('games/:gameId', gamesController.delete);
 
 
-
+/**
+ * @swagger
+ * /games/{gameId}/{side}:
+ *   put:
+ *     tags:
+ *       - Games
+ *     summary: Atualiza dados do time em um jogo (TeamInGame)
+ *     description: >
+ *       Atualiza campos opcionais (teamSelect, score, playerNickOne, playerNickTwo)
+ *       do time (side) dentro de um jogo (gameId). Campos vazios não são alterados.
+ *     parameters:
+ *       - in: path
+ *         name: gameId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do jogo
+ *         example: "69375bb0cb732e5a8af6f157"
+ *       - in: path
+ *         name: side
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [PROFIT, VECTOR]
+ *         description: Lado do time no jogo
+ *         example: "PROFIT"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               teamSelect:
+ *                 type: string
+ *                 example: "Gremio"
+ *               score:
+ *                 type: integer
+ *                 example: 2
+ *               playerNickOne:
+ *                 type: string
+ *                 example: "pedro"
+ *               playerNickTwo:
+ *                 type: string
+ *                 example: "joao"
+ *               dataMatch:
+ *                 type: string
+ *                 example: "21/05/2002"
+ *           examples:
+ *             Atualizar time e placar:
+ *               value:
+ *                 teamSelect: "Gremio"
+ *                 score: 3
+ *                 dataMatch: "21/05/2002"
+ *             Atualizar jogadores:
+ *               value:
+ *                 playerNickOne: "pedro"
+ *                 playerNickTwo: "joao"
+ *     responses:
+ *       200:
+ *         description: Atualização realizada com sucesso
+ *       404:
+ *         description: Game/side não encontrado ou nick não encontrado
+ *         content:
+ *           application/json:
+ *             examples:
+ *               GameNaoEncontrado:
+ *                 value:
+ *                   message: "Id de game não identificado"
+ *               NickNaoEncontrado:
+ *                 value:
+ *                   message: "Esse nick nao foi encontrado pedro10"
+ *       500:
+ *         description: Erro interno no servidor
+ */
 
 router.put('/games/:gameId/:side', gamesController.put);
 
