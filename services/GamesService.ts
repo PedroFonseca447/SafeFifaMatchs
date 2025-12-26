@@ -203,9 +203,16 @@ export class GamesService {
     for (const t of g.teams) {
       const result = t.resultTag as ResultTag | null | undefined;
 
-      if (result === 'WINNER') stats.wins++;
-      else if (result === 'LOSS') stats.loss++;
-      else if (result === 'DRAW') stats.draw++;
+      if (result === 'WINNER') {
+        stats.wins++;
+      }
+
+      else if (result === 'LOSS') {
+        stats.loss++;
+      }
+      else if (result === 'DRAW') {
+        stats.draw++;
+      }
     }
   }
 

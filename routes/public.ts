@@ -491,8 +491,6 @@ router.get('/players/:nickname/games', playersController.get);
 
 
 
-
-
 router.get('/games/:nickname/stats', gamesController.getStatsByNickName);
 
 

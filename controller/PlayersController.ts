@@ -1,6 +1,5 @@
 import { type Request, type Response } from 'express'
 import { prisma } from '../lib/prisma'
-import { getPlayerId } from '../services/service'
 import { playerService } from '../services'
 
 export class PlayersController {
