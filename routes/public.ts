@@ -1,7 +1,5 @@
 import express, { type Request, type Response } from 'express'
-import { prisma } from '../lib/prisma'
-import { getPlayerId } from '../services/service'
-import type { TeamSide } from '@prisma/client'
+import { gamesController, playersController } from '../controller'
 
 
 
@@ -76,40 +74,7 @@ const router = express.Router()
 
 router.post( // evite o usop de cadastroPlayers, o padrao ok para  APIRestful é utilizando
   '/players',
-  async (req: Request, res: Response) => {
-    try {
-      const { name} = req.body;
-
-      if(!name){
-        return res.status(404).json('Bad request, o parametro foi passado de maneira errada');
-      }
-
-       let playerExist = await prisma.player.findUnique({
-        where: { nickName: name },
-      });
-
-      if(playerExist){
-          
-       return res.status(409).json(`esse nickname: ${name} já existe em nosso banco`);
-        
-      }
-
-
-     const newPlayer = await prisma.player.create({
-      data: {
-        nickName: name,
-      },
- 
-    });
-
-      res.status(201).json(newPlayer)
-    } catch (error) {
-      console.error(error)
-      res
-        .status(500)
-        .json({ message: 'Erro no servidor, tente novamenyte' })
-    }
-  },
+  playersController.create,
 )
 
 
@@ -144,33 +109,7 @@ router.post( // evite o usop de cadastroPlayers, o padrao ok para  APIRestful é
  */
 
 
-router.delete('/players/:playerId', async (req: Request<{playerId: string}>, res: Response) => {
-  try{
-
-    const {playerId} = req.body;
-
-    const user = prisma.player.findFirst({
-      where: {id: playerId},
-    })
-
-
-    if(!user){
-      res.status(404).json({ message: "Esse usuário não foi encontrado"})
-    }
-
-
-    await prisma.player.delete({
-      where: {id: playerId}
-    })
-
-    return res.status(204).send();
-
-
-  }catch(error){
-
-     return res.status(500).json({ message: 'Erro interno no servidor' });
-  }
-})
+router.delete('/players/:playerId', playersController.delete)
 
 
 /**
@@ -204,20 +143,7 @@ router.delete('/players/:playerId', async (req: Request<{playerId: string}>, res
 
 
 
-router.get('/players/:nick', async (req: Request<{ nick: string }>, res: Response) => {
-  try {
-
-    const playerNick = req.params.nick ;
-      const player = await getPlayerId(playerNick); 
-
-      if(!player){
-        return res.status(404).json(`esse nick não foi encontrado${playerNick}`);
-      }
-    res.status(200).json(player)
-  } catch (error) {
-    res.status(500).json({ message: 'Erro no servidor, tente novamente' })
-  }
-})
+router.get('/players/:nick', playersController.getIdPlayerbyNick)
 
 
 
@@ -357,73 +283,7 @@ router.get('/players/:nick', async (req: Request<{ nick: string }>, res: Respons
 
 
 
-router.post('/games', async (req: Request, res: Response) => {
-  try {
-    const { dataMatch, teams } = req.body;
-
-
-    if (!Array.isArray(teams) || teams.length !== 2) {
-      return res.status(400).json({
-        message: 'A partida deve conter exatamente 2 times.',
-      });
-    }
-
-
-    const resolvedTeams: any[] = [];
-
-    for (const t of teams) {
-      const playerOneId = await getPlayerId(t.playerOneNickname);
-      const playerTwoId = await getPlayerId(t.playerTwoNickname);
-
-      if (!playerOneId) {
-        return res.status(404).json({
-          message: `Jogador principal (playerOne) não encontrado para o time ${t.teamSelect}.`,
-        });
-      }
-
-     
-      if (playerOneId && playerTwoId && playerOneId === playerTwoId) {
-        return res.status(400).json({
-          message: `playerOne e playerTwo são o mesmo jogador no time ${t.teamSelect}.`,
-        });
-      }
-
-    //protecao no futuro para casos de empate e tags erradas   
-
-      // const profitScore = teams.find(t => t.side === "PROFIT")?.score;
-      // const vectorScore = teams.find(t => t.side === "VECTOR")?.score;
-
-      // // if(profitScore === vectorScore){
-      // //       const profitResult = teams.find(t => t.resultTag === "PROFIT")?.resultTag;
-      // // } 
-
-      
-      resolvedTeams.push({
-        side: t.side,
-        score: t.score,
-        resultTag: t.resultTag,
-        teamSelect: t.teamSelect,
-        playerOneId,
-        playerTwoId,
-      });
-    }
-
-    const game = await prisma.game.create({
-      data: {
-        dataMatch,
-        teams: { create: resolvedTeams },
-      },
-      include: { teams: true },
-    });
-
-    return res.status(201).json(game);
-  } catch (error) {
-    console.error(error);
-    return res
-      .status(500)
-      .json({ message: 'Erro no servidor, tente novamente' });
-  }
-});
+router.post('/games', gamesController.post);
 
 
 
@@ -459,112 +319,86 @@ router.post('/games', async (req: Request, res: Response) => {
 
 
 
-router.delete('games/:gameId', async( req: Request<{gameID: string}>,res: Response) => {
-
-  try{
-
-    const {gameId} = req.body;
-
-    const game = prisma.game.findFirst({
-      where: {id: gameId}
-    })
-
-      if(!game){
-      res.status(404).json({ message: "Essa partida não foi encontrada"})
-    }
+router.delete('games/:gameId', gamesController.delete);
 
 
-    await prisma.player.delete({
-      where: {id: gameId}
-    })
+/**
+ * @swagger
+ * /games/{gameId}/{side}:
+ *   put:
+ *     tags:
+ *       - Games
+ *     summary: Atualiza dados do time em um jogo (TeamInGame)
+ *     description: >
+ *       Atualiza campos opcionais (teamSelect, score, playerNickOne, playerNickTwo)
+ *       do time (side) dentro de um jogo (gameId). Campos vazios não são alterados.
+ *     parameters:
+ *       - in: path
+ *         name: gameId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do jogo
+ *         example: "69375bb0cb732e5a8af6f157"
+ *       - in: path
+ *         name: side
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [PROFIT, VECTOR]
+ *         description: Lado do time no jogo
+ *         example: "PROFIT"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               teamSelect:
+ *                 type: string
+ *                 example: "Gremio"
+ *               score:
+ *                 type: integer
+ *                 example: 2
+ *               playerNickOne:
+ *                 type: string
+ *                 example: "pedro"
+ *               playerNickTwo:
+ *                 type: string
+ *                 example: "joao"
+ *               dataMatch:
+ *                 type: string
+ *                 example: "21/05/2002"
+ *           examples:
+ *             Atualizar time e placar:
+ *               value:
+ *                 teamSelect: "Gremio"
+ *                 score: 3
+ *                 dataMatch: "21/05/2002"
+ *             Atualizar jogadores:
+ *               value:
+ *                 playerNickOne: "pedro"
+ *                 playerNickTwo: "joao"
+ *     responses:
+ *       200:
+ *         description: Atualização realizada com sucesso
+ *       404:
+ *         description: Game/side não encontrado ou nick não encontrado
+ *         content:
+ *           application/json:
+ *             examples:
+ *               GameNaoEncontrado:
+ *                 value:
+ *                   message: "Id de game não identificado"
+ *               NickNaoEncontrado:
+ *                 value:
+ *                   message: "Esse nick nao foi encontrado pedro10"
+ *       500:
+ *         description: Erro interno no servidor
+ */
 
-    return res.status(204).send();
-
-
-  }catch(error){
-    return res.status(500).json({ message: 'Erro interno no servidor' });
-  }
-
-
-})
-
-
-router.put('/games/:id/:side', async (req: Request<{ gameId: string, side: string }>, res: Response) => {
-  try {
-    const idGame = req.params.gameId;
-    const side = req.params.side as TeamSide;
-
-    const { teamSelect, score, playerNickOne, playerNickTwo } = req.body;
- 
-
-    const game = await prisma.teamInGame.findFirst({
-      where: { gameId: idGame , side: side }
-    });
-
-    const data: Record<string, any> = {};
-
-    if (!game) {
-      res.status(404).json({ message: 'Id de game não identificado' })
-      return;
-    }
-
-    
-   if( teamSelect !== "" ){
-      data.teamSelect = teamSelect;
-   }    
-
-    if( score !== "" ){
-      data.score = score;
-   }    
-
-    if( playerNickOne !== "" ){
-
-        const playerIdOneExist = await prisma.player.findFirst({
-          where: {nickName: playerNickOne}
-        })  
-
-        if(!playerIdOneExist){
-          res.status(404).json({ message: `Esse nick nao foi encontrado ${playerNickOne} ` })
-          return;
-        }
-
-        if(playerIdOneExist.id !== game.playerOneId){
-            data.playerOneId = playerIdOneExist.id;
-        }
-    }    
-
-
-    if( playerNickTwo !== "" ){
-
-        const playerTwoExist = await prisma.player.findFirst({
-          where: {nickName: playerNickOne}
-        })  
-
-        if(!playerTwoExist){
-          res.status(404).json({ message: `Esse nick nao foi encontrado ${playerNickTwo} ` })
-          return;
-        }
-
-        if(playerTwoExist.id !== game.playerOneId){
-            data.playerOneId = playerTwoExist.id;
-        }
-    }   
-    
-
-    const update = await prisma.teamInGame.update({
-      where: {id: idGame, side},
-      data,
-    })
-  
-   
-
-    return res.status(200).json(update);
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erro no servidor, tente novamente' })
-  }
-});
+router.put('/games/:gameId/:side', gamesController.put);
 
 
 /**
@@ -581,15 +415,7 @@ router.put('/games/:id/:side', async (req: Request<{ gameId: string, side: strin
  */
 
 
-router.get('/games', async (req: Request, res: Response) => {
-  try {
-    const all = await prisma.game.findMany()
-    res.status(200).json(all)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: 'Erro no servidor, tente novamente' })
-  }
-})
+router.get('/games', gamesController.getAllGamesRegister)
 
 /**
  * @swagger
@@ -638,54 +464,7 @@ router.get('/games', async (req: Request, res: Response) => {
  */
 
 
-router.put('/players/:id', async (req: Request<{ id: string }>, res: Response) => {
-  try {
-    const idPlayer = req.params.id;
-    const { newNickname } = req.body;
-
-    if (!newNickname || newNickname.trim() === '') {
-      res.status(400).json({ message: 'Nickname inválido' })
-      return;
-    }
-
-    const player = await prisma.player.findFirst({
-      where: { id: idPlayer }
-    });
-
-    if (!player) {
-      res.status(404).json({ message: 'Id de usuário não identificado' })
-      return;
-    }
-
-
-    const existsNick = await prisma.player.findFirst({
-      where: {
-        nickName: newNickname,
-        NOT: {
-          id: idPlayer // importante ja que nickname é unique no prisma
-        }
-      }
-    });
-
-    if (existsNick) {
-      res.status(409).json({ message: 'Já existe um usuário com esse nickname' })
-      return;
-    }
-
-    await prisma.player.update({
-      where: { id: idPlayer },
-      data: {
-        nickName: newNickname
-      }
-    });
-
-    res.status(200).json({ message: 'usuário alterado com sucesso' })
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erro no servidor, tente novamente' })
-  }
-});
+router.put('/players/:id', playersController.put );
 
 
 
@@ -720,58 +499,7 @@ router.put('/players/:id', async (req: Request<{ id: string }>, res: Response) =
 
 
 
-router.get('/players/:nickname/games', async (req, res) => {//colection/item/colection seguindo o padrao
-  try {
-    const nickname = req.params.nickname;
-
-    const player = await prisma.player.findFirst({
-      where: { nickName: nickname }, 
-    });
-
-    if (!player) {
-      return res.status(404).json({
-        message: `Player '${nickname}' não encontrado`
-      });
-    }
-
-    const playerId = player.id;
-
-   
-    const gamesWherePlayerWon = await prisma.game.findMany({
-      where: {
-        teams: {
-          some: {
-            resultTag: 'WINNER', 
-            OR: [
-              { playerOneId: playerId },
-              { playerTwoId: playerId },
-            ],
-          },
-        },
-      },
-      include: {
-        teams: {
-          include: {
-            playerOne: true,
-            playerTwo: true,
-          },
-        },
-      },
-    });
-
-    
-
-    return res.status(200).json({
-      totalWins: gamesWherePlayerWon.length,
-    });
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      message: 'Erro no servidor',
-    });
-  }
-});
+router.get('/players/:nickname/games', playersController.get);
 
 
 
@@ -837,68 +565,7 @@ router.get('/players/:nickname/games', async (req, res) => {//colection/item/col
 
 
 
-
-
-router.get('/games/:nickname/stats', async (req: Request<{ nickname: string }>, res: Response) => {
-  const stats = { wins: 0, loss: 0, draw: 0 };
-
-  try {
-    const nickname = req.params.nickname;
-
-    const player = await prisma.player.findFirst({
-      where: { nickName: nickname },
-    });
-
-    if (!player) {
-      return res.status(404).json({ message: `Player '${nickname}' não encontrado` });
-    }
-
-    const playerId = player.id;
-
-    const allPlayerGames = await prisma.game.findMany({
-      where: {
-        teams: {
-          some: {
-            OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
-          },
-        },
-      },
-      select: {
-        id: true,
-        teams: {
-          where: {
-            OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
-          },
-          select: {
-            resultTag: true,
-            playerOneId: true,
-            playerTwoId: true,
-          },
-        },
-      },
-    });
-
-    for (const g of allPlayerGames) {
-      const myTeam = g.teams.find(t => t.playerOneId === playerId || t.playerTwoId === playerId);
-      const result = myTeam?.resultTag;
-
-      if (result === 'WINNER') {
-        stats.wins++;
-      } 
-      else if (result === 'LOSS') {
-        stats.loss++;
-      } 
-      else if (result === 'DRAW') {
-          stats.draw++;
-      } 
-    }
-
-    return res.status(200).json({ stats });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Erro no servidor, tente novamente' });
-  }
-});
+router.get('/games/:nickname/stats', gamesController.getStatsByNickName);
 
 
 
