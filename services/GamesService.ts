@@ -154,8 +154,46 @@ export class GamesService {
 
   async getAllGamesRegister(){
 
-    const all = await prisma.game.findMany();
-    return all;
+     const games = await prisma.game.findMany({
+    include: {
+      teams: {
+        include: {
+          playerOne: { select: { id: true, nickName: true } },
+          playerTwo: { select: { id: true, nickName: true } },
+        },
+      },
+    },
+  });
+
+  return games.map((g) => {
+    const profit = g.teams.find((t) => t.side === 'PROFIT') ?? null;//dados da equipe profit
+    const vector = g.teams.find((t) => t.side === 'VECTOR') ?? null;
+
+    return {
+      id: g.id,
+      dataMatch: g.dataMatch,
+
+      profit: profit
+        ? {
+            teamSelect: profit.teamSelect,
+            score: profit.score,
+            resultTag: profit.resultTag,
+            playerOne: profit.playerOne?.nickName ?? null,
+            playerTwo: profit.playerTwo?.nickName ?? null,
+          }
+        : null,
+
+      vector: vector
+        ? {
+            teamSelect: vector.teamSelect,
+            score: vector.score,
+            resultTag: vector.resultTag,
+            playerOne: vector.playerOne?.nickName ?? null,
+            playerTwo: vector.playerTwo?.nickName ?? null,
+          }
+        : null,
+    };
+  });
   } 
 
 

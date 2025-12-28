@@ -2,13 +2,20 @@ import express from 'express';
 import publicRoutes from './routes/public'
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
+import cors from 'cors';
+
 
 
 
 
 const app = express();
 
-app.use(express.json())// parapoder receber os .json 
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true,
+}))
+
+app.use( express.json())// parapoder receber os .json 
 
 app.use('/',publicRoutes)
 
