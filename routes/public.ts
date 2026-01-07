@@ -417,6 +417,8 @@ router.put('/games/:gameId/:side', gamesController.put);
 
 router.get('/games', gamesController.getAllGamesRegister)
 
+router.get('/games/:nickname/allplayergames',gamesController.getGameByNickName);
+
 /**
  * @swagger
  * /players/{id}:

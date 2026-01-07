@@ -197,6 +197,79 @@ export class GamesService {
   } 
 
 
+  async getGameByNickname(nickName: string) {
+
+    if(nickName === 'all'){
+      // retorna todos os jogos
+      return await this.getAllGamesRegister();
+    }
+
+    const player = await prisma.player.findFirst({
+      where: { nickName: nickName }
+    });
+
+
+    if(!player){
+      const error: any = new Error(` Esse jogador${player} não foi encontrado`)
+      error.statusCode = 400
+      throw error
+    }
+
+    const playerId = player.id;
+
+
+    const allGamesPlayer = await prisma.game.findMany({
+       where: {
+        teams: {
+          some: {
+            OR: [{ playerOneId: playerId }, { playerTwoId: playerId }], // aqui eu filrei na tablea 
+            //games apenas o que era de meu interesse, ou seja, jogos que o player participou
+          }
+        }
+       }, include:{
+        teams: {
+          include: {
+            playerOne: { select: { id: true, nickName: true } },
+            playerTwo: { select: { id: true, nickName: true } },
+          }
+        }
+       }
+    });
+     //o include vai trazer os dados relacionados daquela tabela 
+     // que nao estao no objeto principal de jogos ( data e id , ou seja o que tem em teams)
+
+    return allGamesPlayer.map((g) => {
+      const profit = g.teams.find((t) => t.side === 'PROFIT') ?? null;//dados da equipe profit
+      const vector = g.teams.find((t) => t.side === 'VECTOR') ?? null;
+
+      return {
+        id: g.id,
+        dataMatch: g.dataMatch,
+
+        profit: profit
+          ? {
+              teamSelect: profit.teamSelect,
+              score: profit.score,
+              resultTag: profit.resultTag,
+              playerOne: profit.playerOne?.nickName ?? null,
+              playerTwo: profit.playerTwo?.nickName ?? null,
+            }
+          : null,
+
+        vector: vector
+          ? {
+              teamSelect: vector.teamSelect,
+              score: vector.score,
+              resultTag: vector.resultTag,
+              playerOne: vector.playerOne?.nickName ?? null,
+              playerTwo: vector.playerTwo?.nickName ?? null,
+            }
+          : null,
+      };
+  });
+  }
+    
+
 
   
   async  getStatsByNickName(nickName: string) {
