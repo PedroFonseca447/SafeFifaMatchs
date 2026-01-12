@@ -71,7 +71,7 @@ export class GamesController {
 
       const games = await gamesService.getGameByNickname(nickname)
 
-      return res.status(200).json({ games })
+      return res.status(200).json(games)
      } catch (err) {
         console.error(err)
         return res.status(500).json({ message: 'Erro no servidor, tente novamente' })

@@ -218,7 +218,7 @@ export class GamesService {
     const playerId = player.id;
 
 
-    const allGamesPlayer = await prisma.game.findMany({
+    const games = await prisma.game.findMany({
        where: {
         teams: {
           some: {
@@ -238,7 +238,7 @@ export class GamesService {
      //o include vai trazer os dados relacionados daquela tabela 
      // que nao estao no objeto principal de jogos ( data e id , ou seja o que tem em teams)
 
-    return allGamesPlayer.map((g) => {
+    return games.map((g) => {
       const profit = g.teams.find((t) => t.side === 'PROFIT') ?? null;//dados da equipe profit
       const vector = g.teams.find((t) => t.side === 'VECTOR') ?? null;
 
