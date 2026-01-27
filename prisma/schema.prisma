@@ -22,6 +22,11 @@ model Player{
   id       String @id @default(auto()) @map("_id") @db.ObjectId
   nickName String @unique
 
+  numScoreGoals Int?
+  numWins Int?
+  numLoss Int?
+  numDraw Int?
+
   teamInGameOne  TeamInGame[] @relation("PlayerOneInTeam")
   teamInGameTwo  TeamInGame[] @relation("PlayerTwoInTeam")
 }

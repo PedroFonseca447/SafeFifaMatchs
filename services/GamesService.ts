@@ -2,52 +2,77 @@ import type { TeamSide } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { getPlayerId } from './service'
 
-
-type ResultTag = 'WINNER' | 'LOSS' | 'DRAW';
+type ResultTag = 'WINNER' | 'LOSS' | 'DRAW'
 export class GamesService {
   async post(dataMatch: any, teams: any) {
-    if (!Array.isArray(teams) || teams.length !== 2) {
-      const error: any = new Error('Não é permitido salvar apenas um time por partida.')
+  if (!Array.isArray(teams) || teams.length !== 2) {
+    const error: any = new Error('Não é permitido salvar apenas um time por partida.')
+    error.statusCode = 400
+    throw error
+  }
+
+  const resolvedTeams: any[] = []
+
+  for (const t of teams) {
+    const playerOneId = await getPlayerId(t.playerOneNickname)
+    const playerTwoId = await getPlayerId(t.playerTwoNickname)
+
+    if (!playerOneId || !playerTwoId) {
+      const error: any = new Error('O nick de player não foi reconhecido.')
       error.statusCode = 400
       throw error
     }
 
-    const resolvedTeams: any[] = []
-
-    for (const t of teams) {
-      const playerOneId = await getPlayerId(t.playerOneNickname)
-      const playerTwoId = await getPlayerId(t.playerTwoNickname)
-
-      if (!playerOneId) {
-        const error: any = new Error('O nick de player não foi reconhecido.')
-        error.statusCode = 400
-        throw error
-      }
-
-      if (playerOneId === playerTwoId) {
-        const error: any = new Error('O nick de player é o mesmo nos 2 jogadores, não é permitido.')
-        error.statusCode = 400
-        throw error
-      }
-
-      resolvedTeams.push({
-        side: t.side,
-        score: t.score,
-        resultTag: t.resultTag,
-        teamSelect: t.teamSelect,
-        playerOneId,
-        playerTwoId,
-      })
+    if (playerOneId === playerTwoId) {
+      const error: any = new Error('O nick de player é o mesmo nos 2 jogadores, não é permitido.')
+      error.statusCode = 400
+      throw error
     }
 
-    return prisma.game.create({
+    const score = Number(t.score ?? 0)
+
+    const resultInc =
+      t.resultTag === 'WINNER'
+        ? { numWins: { increment: 1 } }
+        : t.resultTag === 'LOSS'
+          ? { numLoss: { increment: 1 } }
+          : { numDraw: { increment: 1 } }
+
+    // ✅ usa os IDs resolvidos
+    await prisma.player.update({
+      where: { id: playerOneId },
       data: {
-        dataMatch,
-        teams: { create: resolvedTeams },
+        numScoreGoals: { increment: score },
+        ...resultInc,
       },
-      include: { teams: true },
+    })
+
+    await prisma.player.update({
+      where: { id: playerTwoId },
+      data: {
+        numScoreGoals: { increment: score },
+        ...resultInc,
+      },
+    })
+
+    resolvedTeams.push({
+      side: t.side,
+      score,
+      resultTag: t.resultTag,
+      teamSelect: t.teamSelect,
+      playerOneId,
+      playerTwoId,
     })
   }
+
+  return prisma.game.create({
+    data: {
+      dataMatch,
+      teams: { create: resolvedTeams },
+    },
+    include: { teams: true },
+  })
+}
 
   async delete(gameId: string) {
     const game = prisma.game.findFirst({
@@ -74,7 +99,6 @@ export class GamesService {
     playerNickTwo?: string,
     dataMatch?: string,
   ) {
-   
     if (dataMatch && dataMatch.trim() !== '') {
       await prisma.game.update({
         where: { id: gameId },
@@ -100,7 +124,6 @@ export class GamesService {
       data.teamSelect = teamSelect
     }
 
-   
     if (typeof score === 'number') {
       data.score = score
     }
@@ -137,7 +160,6 @@ export class GamesService {
       }
     }
 
- 
     return prisma.teamInGame.update({
       where: {
         gameId_side: {
@@ -149,98 +171,21 @@ export class GamesService {
     })
   }
 
-
-
-
-  async getAllGamesRegister(){
-
-     const games = await prisma.game.findMany({
-    include: {
-      teams: {
-        include: {
-          playerOne: { select: { id: true, nickName: true } },
-          playerTwo: { select: { id: true, nickName: true } },
-        },
-      },
-    },
-  });
-
-  return games.map((g) => {
-    const profit = g.teams.find((t) => t.side === 'PROFIT') ?? null;//dados da equipe profit
-    const vector = g.teams.find((t) => t.side === 'VECTOR') ?? null;
-
-    return {
-      id: g.id,
-      dataMatch: g.dataMatch,
-
-      profit: profit
-        ? {
-            teamSelect: profit.teamSelect,
-            score: profit.score,
-            resultTag: profit.resultTag,
-            playerOne: profit.playerOne?.nickName ?? null,
-            playerTwo: profit.playerTwo?.nickName ?? null,
-          }
-        : null,
-
-      vector: vector
-        ? {
-            teamSelect: vector.teamSelect,
-            score: vector.score,
-            resultTag: vector.resultTag,
-            playerOne: vector.playerOne?.nickName ?? null,
-            playerTwo: vector.playerTwo?.nickName ?? null,
-          }
-        : null,
-    };
-  });
-  } 
-
-
-  async getGameByNickname(nickName: string) {
-
-    if(nickName === 'all'){
-      // retorna todos os jogos
-      return await this.getAllGamesRegister();
-    }
-
-    const player = await prisma.player.findFirst({
-      where: { nickName: nickName }
-    });
-
-
-    if(!player){
-      const error: any = new Error(` Esse jogador${player} não foi encontrado`)
-      error.statusCode = 400
-      throw error
-    }
-
-    const playerId = player.id;
-
-
+  async getAllGamesRegister() {
     const games = await prisma.game.findMany({
-       where: {
-        teams: {
-          some: {
-            OR: [{ playerOneId: playerId }, { playerTwoId: playerId }], // aqui eu filrei na tablea 
-            //games apenas o que era de meu interesse, ou seja, jogos que o player participou
-          }
-        }
-       }, include:{
+      include: {
         teams: {
           include: {
             playerOne: { select: { id: true, nickName: true } },
             playerTwo: { select: { id: true, nickName: true } },
-          }
-        }
-       }
-    });
-     //o include vai trazer os dados relacionados daquela tabela 
-     // que nao estao no objeto principal de jogos ( data e id , ou seja o que tem em teams)
+          },
+        },
+      },
+    })
 
     return games.map((g) => {
-      const profit = g.teams.find((t) => t.side === 'PROFIT') ?? null;//dados da equipe profit
-      const vector = g.teams.find((t) => t.side === 'VECTOR') ?? null;
+      const profit = g.teams.find((t) => t.side === 'PROFIT') ?? null //dados da equipe profit
+      const vector = g.teams.find((t) => t.side === 'VECTOR') ?? null
 
       return {
         id: g.id,
@@ -265,73 +210,136 @@ export class GamesService {
               playerTwo: vector.playerTwo?.nickName ?? null,
             }
           : null,
-      };
-  });
-  }
-    
-
-
-  
-  async  getStatsByNickName(nickName: string) {
-  const stats = { wins: 0, loss: 0, draw: 0 };
-
-
-  const player = await prisma.player.findFirst({
-    where: { nickName },
-    select: { id: true },
-  });
-
-  if (!player) {
-    const error: any = new Error(`Nick não encontrado: ${nickName}`);
-    error.statusCode = 404;
-    throw error;
+      }
+    })
   }
 
-  const playerId = player.id;
+  async getGameByNickname(nickName: string) {
+    if (nickName === 'all') {
+      // retorna todos os jogos
+      return await this.getAllGamesRegister()
+    }
 
-  const allPlayerGames = await prisma.game.findMany({
-    where: {
-      teams: {
-        some: {
-          OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
+    const player = await prisma.player.findFirst({
+      where: { nickName: nickName },
+    })
+
+    if (!player) {
+      const error: any = new Error(` Esse jogador${player} não foi encontrado`)
+      error.statusCode = 400
+      throw error
+    }
+
+    const playerId = player.id
+
+    const games = await prisma.game.findMany({
+      where: {
+        teams: {
+          some: {
+            OR: [{ playerOneId: playerId }, { playerTwoId: playerId }], // aqui eu filrei na tablea
+            //games apenas o que era de meu interesse, ou seja, jogos que o player participou
+          },
         },
       },
-    },
-    select: {
-      id: true,
-      teams: {
-        where: {
-          OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
-        },
-        select: {
-          resultTag: true,
+      include: {
+        teams: {
+          include: {
+            playerOne: { select: { id: true, nickName: true } },
+            playerTwo: { select: { id: true, nickName: true } },
+          },
         },
       },
-    },
-  });
+    })
+    //o include vai trazer os dados relacionados daquela tabela
+    // que nao estao no objeto principal de jogos ( data e id , ou seja o que tem em teams)
 
-  for (const g of allPlayerGames) {
-    for (const t of g.teams) {
-      const result = t.resultTag as ResultTag | null | undefined;
+    return games.map((g) => {
+      const profit = g.teams.find((t) => t.side === 'PROFIT') ?? null //dados da equipe profit
+      const vector = g.teams.find((t) => t.side === 'VECTOR') ?? null
 
-      if (result === 'WINNER') {
-        stats.wins++;
+      return {
+        id: g.id,
+        dataMatch: g.dataMatch,
+
+        profit: profit
+          ? {
+              teamSelect: profit.teamSelect,
+              score: profit.score,
+              resultTag: profit.resultTag,
+              playerOne: profit.playerOne?.nickName ?? null,
+              playerTwo: profit.playerTwo?.nickName ?? null,
+            }
+          : null,
+
+        vector: vector
+          ? {
+              teamSelect: vector.teamSelect,
+              score: vector.score,
+              resultTag: vector.resultTag,
+              playerOne: vector.playerOne?.nickName ?? null,
+              playerTwo: vector.playerTwo?.nickName ?? null,
+            }
+          : null,
       }
+    })
+  }
 
-      else if (result === 'LOSS') {
-        stats.loss++;
-      }
-      else if (result === 'DRAW') {
-        stats.draw++;
+  async getStatsByNickName(nickName: string) {
+    const stats = { wins: 0, loss: 0, draw: 0 }
+
+    const player = await prisma.player.findFirst({
+      where: { nickName },
+      select: { id: true },
+    })
+
+    if (!player) {
+      const error: any = new Error(`Nick não encontrado: ${nickName}`)
+      error.statusCode = 404
+      throw error
+    }
+
+    const playerId = player.id
+
+    const allPlayerGames = await prisma.game.findMany({
+      where: {
+        teams: {
+          some: {
+            OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
+          },
+        },
+      },
+      select: {
+        id: true,
+        teams: {
+          where: {
+            OR: [{ playerOneId: playerId }, { playerTwoId: playerId }],
+          },
+          select: {
+            resultTag: true,
+          },
+        },
+      },
+    })
+
+    for (const g of allPlayerGames) {
+      for (const t of g.teams) {
+        const result = t.resultTag as ResultTag | null | undefined
+
+        if (result === 'WINNER') {
+          stats.wins++
+        } else if (result === 'LOSS') {
+          stats.loss++
+        } else if (result === 'DRAW') {
+          stats.draw++
+        }
       }
     }
-  }
 
-  return {
-    nickName,
-    playerId,
-    totalGames: allPlayerGames.length,
-    stats,
-  };
-}
+    return {
+      nickName,
+      playerId,
+      totalGames: allPlayerGames.length,
+      stats,
+    }
+  }
 }
