@@ -3,11 +3,23 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
+
     "module": "CommonJS",
     "moduleResolution": "node",
-    "sourceMap": false,
+
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false,
+    "noUncheckedSideEffectImports": false,
+
     "declaration": false,
-    "declarationMap": false
+    "declarationMap": false,
+    "sourceMap": false
   },
-  "include": ["server.ts", "routes/**/*.ts", "controller/**/*.ts", "services/**/*.ts", "lib/**/*.ts"]
+  "include": [
+    "server.ts",
+    "routes/**/*.ts",
+    "controller/**/*.ts",
+    "services/**/*.ts",
+    "lib/**/*.ts"
+  ]
 }
