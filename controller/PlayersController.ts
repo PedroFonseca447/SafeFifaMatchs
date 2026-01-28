@@ -92,6 +92,23 @@ export class PlayersController {
     }
   }
 
+   async getAllStatusPlayers(req: Request<{ nickname: string }>, res: Response) {
+    try {
+      
+
+      const listPlayersStats = await playerService.getAllStatusPlayers()
+
+      return res.status(200).json({
+        totalmatchs: listPlayersStats,
+      })
+    } catch (error) {
+      console.error(error)
+      return res.status(500).json({
+        message: 'Erro no servidor',
+      })
+    }
+  }
+
   async getIdPlayerbyNick(req: Request<{ nick: string }>, res: Response) {
     try {
       const playerNick = req.params.nick 

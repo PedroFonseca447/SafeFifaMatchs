@@ -44,6 +44,22 @@ export class PlayerService {
     })
   }
 
+
+  async getAllStatusPlayers(){
+    const players = await prisma.player.findMany();
+
+    return players.map((objMap) => {
+        return {
+          userName: objMap.nickName,
+          scoreGoals: objMap.numScoreGoals,
+          wins: objMap.numWins,
+          loss: objMap.numLoss,
+          draw: objMap.numDraw,
+
+        }
+    })
+  }
+
   async getNumPlayersWon(nickName: string) {
     const player = await prisma.player.findFirst({
       where: { nickName: nickName },

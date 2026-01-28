@@ -417,6 +417,9 @@ router.put('/games/:gameId/:side', gamesController.put);
 
 router.get('/games', gamesController.getAllGamesRegister)
 
+
+router.get('/playersStats', playersController.getAllStatusPlayers)
+
 router.get('/games/:nickname/allplayergames',gamesController.getGameByNickName);
 
 /**
