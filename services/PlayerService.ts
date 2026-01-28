@@ -48,7 +48,7 @@ export class PlayerService {
   async getAllStatusPlayers(){
     const players = await prisma.player.findMany();
 
-    return players.map((objMap) => {
+    return players.map((objMap: any) => {
         return {
           userName: objMap.nickName,
           scoreGoals: objMap.numScoreGoals,

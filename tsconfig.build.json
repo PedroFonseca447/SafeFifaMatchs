@@ -3,18 +3,11 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "sourceMap": false,
     "declaration": false,
     "declarationMap": false
   },
-  "include": [
-    "server.ts",
-    "routes/**/*.ts",
-    "controller/**/*.ts",
-    "services/**/*.ts",
-    "lib/**/*.ts",
-    "prisma.config.ts"
-  ]
+  "include": ["server.ts", "routes/**/*.ts", "controller/**/*.ts", "services/**/*.ts", "lib/**/*.ts"]
 }
