@@ -41,7 +41,11 @@ const swaggerOptions = {
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
+const PORT = Number(process.env.PORT) || 3000 
+
 
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
-app.listen(3000, () => console.info("Servidor inicializando"));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`API rodando na porta ${PORT}`)
+})
