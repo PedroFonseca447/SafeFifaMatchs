@@ -3,11 +3,18 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "sourceMap": false,
     "declaration": false,
-    "declarationMap": false,
-    "noUncheckedSideEffectImports": false,
-    "verbatimModuleSyntax": false
+    "declarationMap": false
   },
-  "include": ["server.ts", "src/**/*.ts"]
+  "include": [
+    "server.ts",
+    "routes/**/*.ts",
+    "controller/**/*.ts",
+    "services/**/*.ts",
+    "lib/**/*.ts",
+    "prisma.config.ts"
+  ]
 }

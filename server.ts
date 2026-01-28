@@ -1,5 +1,5 @@
 import express from 'express';
-import publicRoutes from './routes/public'
+import publicRoutes from './routes/public.js'
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
 import cors from 'cors';
