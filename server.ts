@@ -11,9 +11,9 @@ import cors from 'cors';
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true,
+  origin: process.env.CORS_ORIGIN?.split(',').map(s => s.trim()),
 }))
+
 
 app.use( express.json())// parapoder receber os .json 
 
