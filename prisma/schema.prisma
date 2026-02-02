@@ -50,6 +50,9 @@ model TeamInGame {
   resultTag     String
   teamSelect    String
 
+  teamChoiceId String?      @db.ObjectId
+  teamChoice   TeamsChoice? @relation("TeamChoiceInTeamGame", fields: [teamChoiceId], references: [id])
+
   playerOneId   String?  @db.ObjectId
   playerOne     Player?  @relation("PlayerOneInTeam", fields: [playerOneId], references: [id])
 
@@ -57,4 +60,13 @@ model TeamInGame {
   playerTwo     Player?  @relation("PlayerTwoInTeam", fields: [playerTwoId], references: [id])
 
    @@unique([gameId, side])// para garantir que so tenha 1 vector e 1 profit por id de partida
+}
+
+
+model TeamsChoice {
+  id    String    @id @default(auto()) @map("_id") @db.ObjectId
+  nome String @unique
+  stars Float
+  nChoices Int @default(0)
+  teamInGames TeamInGame[] @relation("TeamChoiceInTeamGame")
 }

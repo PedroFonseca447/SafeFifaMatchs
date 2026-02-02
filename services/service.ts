@@ -20,3 +20,26 @@ export async function getPlayerId(nickname: string): Promise<string | null> {
 }
 
 
+
+export async function getTeamChoiceId(teamNickName: string) {
+
+  if(!teamNickName){
+    return null;
+  }
+
+
+  let teamName = await prisma.teamsChoice.findFirst({
+    where: {
+      nome: teamNickName
+    }
+  })
+
+    if (!teamName) {
+    return '';
+  }
+
+  return teamName.id;
+  
+}
+
+
